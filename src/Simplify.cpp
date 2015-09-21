@@ -167,6 +167,7 @@ private:
         Expr value = mutate(op->value);
         const Cast *cast = value.as<Cast>();
         const Broadcast *broadcast_value = value.as<Broadcast>();
+        const Ramp *ramp_value = value.as<Ramp>();
         float f = 0.0f;
         int i = 0;
         if (value.type() == op->type) {
@@ -205,6 +206,11 @@ private:
         } else if (broadcast_value) {
             // cast(broadcast(x)) -> broadcast(cast(x))
             expr = mutate(Broadcast::make(Cast::make(op->type.element_of(), broadcast_value->value), broadcast_value->width));
+        } else if (ramp_value) {
+            // cast(ramp(a, b, w)) -> ramp(cast(a), cast(b), w)
+            expr = mutate(Ramp::make(Cast::make(op->type.element_of(), ramp_value->base),
+                                     Cast::make(op->type.element_of(), ramp_value->stride),
+                                     ramp_value->width));
         } else if (value.same_as(op->value)) {
             expr = op;
         } else {
