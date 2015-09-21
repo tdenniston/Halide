@@ -34,7 +34,7 @@ using std::vector;
 // Things that we can constant fold: Immediates and broadcasts of
 // immediates.
 bool is_simple_const(Expr e) {
-    if (e.as<IntImm>()) return true;
+    if (as_const_int(e)) return true;
     if (e.as<FloatImm>()) return true;
     if (const Broadcast *b = e.as<Broadcast>()) {
         return is_simple_const(b->value);
@@ -116,9 +116,9 @@ private:
         if (!e.defined()) {
             return false;
         }
-        const IntImm *c = e.as<IntImm>();
-        if (c) {
-            *i = c->value;
+        const int *value = as_const_int(e);
+        if (value) {
+            *i = *value;
             return true;
         } else {
             return false;

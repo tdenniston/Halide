@@ -80,6 +80,10 @@ bool is_no_op(Stmt s) {
 }
 
 const int * as_const_int(Expr e) {
+    const Cast *c = e.as<Cast>();
+    if (c && c->type.is_int()) {
+        e = c->value;
+    }
     const IntImm *i = e.as<IntImm>();
     return i ? &(i->value) : NULL;
 }
