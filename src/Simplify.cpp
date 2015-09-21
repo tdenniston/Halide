@@ -279,6 +279,9 @@ private:
         const Mul *mul_a_b = add_a ? add_a->b.as<Mul>(): NULL;
         const Mod *mod_a_b = add_a ? add_a->b.as<Mod>(): NULL;
 
+        const Cast *cast_a = a.as<Cast>();
+        const Cast *cast_b = b.as<Cast>();
+
         const Min *min_a = a.as<Min>();
         const Max *max_a = a.as<Max>();
         const Sub *sub_a_a = min_a ? min_a->a.as<Sub>() : NULL;
@@ -445,6 +448,9 @@ private:
                    (!mod_a_a || !equal(mod_a_a->b, mul_b->b))) {
             // (y + (x%3)) + z*3 -> y + (z*3 + x%3)
             expr = mutate(add_a->a + (b + add_a->b));
+        } else if (cast_a && cast_b && cast_a->type == cast_b->type) {
+            // cast(t, a) + cast(t, b) -> cast(t, a + b)
+            expr = mutate(Cast::make(cast_a->type, cast_a->value + cast_b->value));
         } else if (a.same_as(op->a) && b.same_as(op->b)) {
             // If we've made no changes, and can't find a rule to apply, return the operator unchanged.
             expr = op;
@@ -470,6 +476,9 @@ private:
         const Sub *sub_b = b.as<Sub>();
         const Mul *mul_a = a.as<Mul>();
         const Mul *mul_b = b.as<Mul>();
+
+        const Cast *cast_a = a.as<Cast>();
+        const Cast *cast_b = b.as<Cast>();
 
         const Min *min_b = b.as<Min>();
         const Add *add_b_a = min_b ? min_b->a.as<Add>() : NULL;
@@ -577,6 +586,9 @@ private:
         } else if (add_a && add_b && equal(add_a->b, add_b->a)) {
             // (b + a) - (a + c) -> b - c
             expr = mutate(add_a->a - add_b->b);
+        } else if (cast_a && cast_b && cast_a->type == cast_b->type) {
+            // cast(t, a) - cast(t, b) -> cast(t, a - b)
+            expr = mutate(Cast::make(cast_a->type, cast_a->value - cast_b->value));
         } else if (min_b && add_b_a && no_overflow(op->type) && equal(a, add_b_a->a)) {
             // Quaternary expressions involving mins where a term
             // cancels. These are important for bounds inference
