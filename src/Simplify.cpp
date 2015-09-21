@@ -116,9 +116,9 @@ private:
         if (!e.defined()) {
             return false;
         }
-        const int *value = as_const_int(e);
-        if (value) {
-            *i = *value;
+        const IntImm *c = e.as<IntImm>();
+        if (c) {
+            *i = c->value;
             return true;
         } else {
             return false;
@@ -157,6 +157,9 @@ private:
             // return value is in the correct range (i.e. the
             // canonical value) for the cast type.
             *i = int_cast_constant(cast->type, *i);
+            return true;
+        } else if (cast && (cast->type.is_int() || cast->type.is_uint()) &&
+                   const_castint(cast->value, i)) {
             return true;
         } else {
             return false;
@@ -974,11 +977,11 @@ private:
                 expr = make_const(op->type, std::min(ia,ib));
             }
             return;
-        } else if (const_castint(b, &ib) && ib == b.type().imax()) {
+        } else if (const_castint(b, &ib) && b.type().bits < 64 && ib == b.type().imax()) {
             // Compute minimum of expression of type and maximum of type --> expression
             expr = a;
             return;
-        } else if (const_castint(b, &ib) && ib == b.type().imin()) {
+        } else if (const_castint(b, &ib) && b.type().bits < 64 && ib == b.type().imin()) {
             // Compute minimum of expression of type and minimum of type --> min of type
             expr = b;
             return;
@@ -1218,11 +1221,11 @@ private:
                 expr = make_const(op->type, std::max(ia, ib));
             }
             return;
-        } else if (const_castint(b, &ib) && ib == b.type().imin()) {
+        } else if (const_castint(b, &ib) && b.type().bits < 64 && ib == b.type().imin()) {
             // Compute maximum of expression of type and minimum of type --> expression
             expr = a;
             return;
-        } else if (const_castint(b, &ib) && ib == b.type().imax()) {
+        } else if (const_castint(b, &ib) && b.type().bits < 64 && ib == b.type().imax()) {
             // Compute maximum of expression of type and maximum of type --> max of type
             expr = b;
             return;
@@ -1538,10 +1541,10 @@ private:
             } else {
                 expr = make_bool(ia < ib, op->type.width);
             }
-        } else if (const_castint(a, &ia) && ia == a.type().imax()) {
+        } else if (const_castint(a, &ia) && a.type().bits < 64 && ia == a.type().imax()) {
             // Comparing maximum of type < expression of type.  This can never be true.
             expr = const_false(op->type.width);
-        } else if (const_castint(b, &ib) && ib == b.type().imin()) {
+        } else if (const_castint(b, &ib) && b.type().bits < 64 && ib == b.type().imin()) {
             // Comparing expression of type < minimum of type.  This can never be true.
             expr = const_false(op->type.width);
         } else if (is_zero(delta) || (no_overflow(delta.type()) && is_positive_const(delta))) {
@@ -2096,7 +2099,7 @@ private:
             int ib = 0;
             int bits;
 
-            if (const_castint(b, &ib) &&
+            if (const_castint(b, &ib) && b.type().bits < 64 &&
                 ((ib < b.type().imax()) && (ib < std::numeric_limits<int>::max()) &&
                  is_const_power_of_two_integer(ib + 1, &bits))) {
                   expr = Mod::make(a, ib + 1);
@@ -2112,7 +2115,7 @@ private:
             Type ta = a.type();
             int ia = 0;
             float fa = 0;
-            if (ta.is_int() && const_castint(a, &ia)) {
+            if (ta.is_int() && const_castint(a, &ia) && a.type().bits < 64) {
                 if (ia < 0 && ia != Int(32).imin()) {
                     ia = -ia;
                 }
