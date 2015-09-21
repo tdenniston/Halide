@@ -120,16 +120,19 @@ class VectorizeLoops : public IRMutator {
             // Internal allocations always get vectorized.
             if (internal_allocations.contains(op->name)) {
                 int width = replacement.type().width;
+                Expr cast_width = index.type().bits == 64 ? cast<int64_t>(width) : width;
+                Expr stride = make_one(index.type());
                 if (index.type().is_scalar()) {
                     if (scalarized) {
-                        index = Add::make(Mul::make(index, width), scalar_lane);
+                        index = Add::make(Mul::make(index, cast_width), scalar_lane);
                     } else {
-                        index = Ramp::make(Mul::make(index, width), 1, width);
+                        index = Ramp::make(Mul::make(index, cast_width), stride, width);
                     }
                 } else {
                     internal_assert(!scalarized);
-                    index = Mul::make(index, Broadcast::make(width, width));
-                    index = Add::make(index, Ramp::make(0, 1, width));
+                    Expr base = make_zero(index.type());
+                    index = Mul::make(index, Broadcast::make(cast_width, width));
+                    index = Add::make(index, Ramp::make(base, stride, width));
                 }
             }
 
@@ -378,16 +381,19 @@ class VectorizeLoops : public IRMutator {
             // Internal allocations always get vectorized.
             if (internal_allocations.contains(op->name)) {
                 int width = replacement.type().width;
+                Expr cast_width = index.type().bits == 64 ? cast<int64_t>(width) : width;
+                Expr stride = make_one(index.type());
                 if (index.type().is_scalar()) {
                     if (scalarized) {
-                        index = Add::make(Mul::make(index, width), scalar_lane);
+                        index = Add::make(Mul::make(index, cast_width), scalar_lane);
                     } else {
-                        index = Ramp::make(Mul::make(index, width), 1, width);
+                        index = Ramp::make(Mul::make(index, cast_width), stride, width);
                     }
                 } else {
                     internal_assert(!scalarized);
-                    index = Mul::make(index, Broadcast::make(width, width));
-                    index = Add::make(index, Ramp::make(0, 1, width));
+                    Expr base = make_zero(index.type());
+                    index = Mul::make(index, Broadcast::make(cast_width, width));
+                    index = Add::make(index, Ramp::make(base, stride, width));
                 }
             }
 
